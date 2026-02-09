@@ -1,35 +1,26 @@
-const http = require('http');
-const fs = require('fs');
+const express = require('express');
 const path = require('path');
+const handleRoutes = require('./routes/router'); // Seu router refatorado
+
+const app = express();
 
 // Configurações do servidor
-const hostname = '127.0.0.1'; // Localhost
+const hostname = '127.0.0.1';
 const port = 3000;
 
-const server = http.createServer((req, res) => {
-  // Configurando o cabeçalho da resposta (Status 200 = OK)
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+// 1. Middlewares Essenciais
+app.use(express.json()); // Para suportar JSON no corpo das requisições (útil para o login)
+app.use(express.urlencoded({ extended: true })); // Para suportar dados vindos de formulários HTML
 
-  // Lógica de rotas simples
-  if (req.url === '/' && req.method === 'GET') {
-    fs.readFile(path.join(__dirname, 'screens', 'index.html'), (err, content) => {
-      res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end(content);
-    });
-  } else if (req.url === '/sobre') {
-    res.end('Este é um servidor HTTP básico criado com Node.js.');
-  } 
-    else if(req.url === '/login'){
-        res.end('Aqui deveria estar logado p qlq um...')
-  }
-  else {
-    res.statusCode = 404;
-    res.end('Página não encontrada.');
-  }
-});
+// 2. Arquivos Estáticos
+// Se suas imagens/css/js estiverem na pasta 'view', o Express serve eles automaticamente
+app.use(express.static(path.join(__dirname, 'view')));
 
-// Iniciando o servidor
-server.listen(port, hostname, () => {
+// 3. Usando suas rotas
+// Aqui o Express passa o controle para o arquivo que adaptamos antes
+app.use('/', handleRoutes);
+
+// 4. Iniciando o servidor
+app.listen(port, hostname, () => {
   console.log(`Servidor rodando em http://${hostname}:${port}/`);
 });
