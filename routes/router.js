@@ -10,10 +10,10 @@ const viewPath = path.join(__dirname, '..', 'view');
 router.get('/', basicController.basicController);
 
 // Rota de Login
-router.get('/login', basicController.basicController);
+router.get('/login', basicController.login);
 
 // Rota Sobre (Texto simples)
-router.get('/sobre', basicController.basicController);
+router.get('/sobre', basicController.about);
 
 // Rota Home (agora com autenticação)
 router.post("/home", authController.authenticate);
