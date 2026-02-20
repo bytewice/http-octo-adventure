@@ -16,7 +16,7 @@ router.get('/login', basicController.login);
 router.get('/sobre', basicController.about);
 
 // Rota Home (agora com autenticação)
-router.post("/home", authController.authenticate);
-
+router.post("/login", authController.authenticate); // Usando a função que autentica com o banco de dados
+router.get("/home", authController.userHome);
 
 module.exports = router;

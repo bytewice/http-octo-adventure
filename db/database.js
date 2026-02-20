@@ -1,129 +1,152 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+// database.js
+require('dotenv').config();
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto'); // usando crypto so por enquanto q n coloquei o salt no database
+const { createClient } = require('@libsql/client');
 
-require('dotenv').config(); // carregar variaveis de ambiente
-const dbPath = path.resolve(__dirname, 'data.db'); 
-
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Erro ao conectar ao SQLite:', err.message);
-    } else {
-        console.log('Banco de dados SQLite pronto.');
-    }
+// tables = sessoes e usuarios
+// Conexão com o Turso
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL,
+  authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
-// Criando a tabela com as colunas solicitadas
-db.serialize(() => {
-    // 1. Cria a tabela
-    db.run(`
-        CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            sessid TEXT,
-            secret TEXT,
-            role TEXT,
-            criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `, (err) => {
-        if (err) {
-            console.error('Erro ao criar tabela:', err.message);
-        } 
-        // adicionar o usuario admin não está funcionando, corrigir isso aqui depois
-        else {
-            console.log('Tabela "usuarios" verificada/criada com sucesso.');
-            
-            // 2. Tenta inserir o usuário padrão logo após garantir que a tabela existe
-            // Usamos OR IGNORE para que, se o "brunao" já existir, ele simplesmente não faça nada
-            const insertDefault = `
-                INSERT OR IGNORE INTO usuarios (usuario, password, sessid, role, secret) 
-                VALUES (?, ?, ?, ?, ?)
-            `;
+async function cadastrarAdmin() {
+    const usuario = process.env.ADMIN_USER;
+    const senhaPura = process.env.ADMIN_PASS; 
+    const secret = process.env.ADMIN_SECRET;
+    const role = 'admin';
 
-            const values = [
-                process.env.ADMIN_USER,
-                process.env.ADMIN_PASS,
-                process.env.ADMIN_SESSID,
-                process.env.ADMIN_ROLE,
-                process.env.ADMIN_SECRET
-            ];
+    try {
+        console.log("Gerando hash da senha...");
+        const hash = crypto.createHash('sha256').update(senhaPura).digest('hex');
+        console.log(`Conectando ao Turso em Virginia para cadastrar ${usuario}...`);
+        
+        const sql = `
+            INSERT INTO usuarios (usuario, password, secret, role) 
+            VALUES (?, ?, ?, ?)
+        `;
 
-            db.run(insertDefault, values, function(err) {
-                if (err) {
-                    console.error('Erro ao inserir usuário padrão:', err.message);
-                } else if (this.changes > 0) {
-                    const name = process.env.ADMIN_USER;
-                    console.log(`Usuário padrão "${name}" criado com sucesso!`);
-                } else {
-                    const name = process.env.ADMIN_USER;
-                    console.log(`Usuário padrão "${name}" já existe, pulando criação.`);
-                }
-            });
-        }
-    });
-});
-
-const listarTabelas = () => {
-    const sql = `SELECT name FROM sqlite_master WHERE type='table'`;
-    
-    db.all(sql, [], (err, rows) => {
-        if (err) {
-            return console.error('Erro ao listar tabelas:', err.message);
-        }
-        console.log('Tabelas no banco de dados:');
-        rows.forEach((row) => {
-            console.log(row.name);
+        await client.execute({
+            sql,
+            args: [usuario, hash, secret, role]
         });
-    });
-}
 
-const deletarTabelaUsuarios = () => {
-    const sql = `DROP TABLE IF EXISTS usuarios`;
-    
-    db.run(sql, function(err) {
-        if (err) {
-            return console.error('Erro ao deletar tabela:', err.message);
-        }
-        console.log('Tabela "usuarios" deletada com sucesso!');
-    });
-}
-
-const deletarUsuario = (usuario) => {
-    const sql = `DELETE FROM usuarios WHERE usuario = ?`;
-    
-    db.run(sql, [usuario], function(err) {
-        if (err) {
-            return console.error('Erro ao deletar usuário:', err.message);
-        }
-        console.log(`Usuário ${usuario} deletado com sucesso!`);
-    })
-};
-
-const cadastrarUsuario = (usuario, password, sessid, secret, role) => {
-    const sql = `INSERT INTO usuarios (usuario, password, sessid, role, secret) VALUES (?, ?, ?, ?, ?)`;
-    
-    db.run(sql, [usuario, password, sessid, secret, role], function(err) {
-        if (err) {
-            return console.error('Erro ao inserir usuário:', err.message);
-        }
-        console.log(`Usuário ${usuario} adicionado com sucesso! ID: ${this.lastID}`);
-    });
-};
-
-const secret_from_user = (usuario, callback) => {
-    const sql = `SELECT secret FROM usuarios WHERE usuario = ?`;
-    
-    db.get(sql, [usuario], (err, row) => {
-        if (err) {
-            console.error('Erro ao buscar secret:', err.message);
-            return callback(err);
-        }
-        if (row) {
-            callback(null, row.secret);
+        console.log("✅ Usuário administrador cadastrado com sucesso no Turso!");
+    } catch (err) {
+        if (err.message.includes("UNIQUE constraint failed")) {
+            console.error("❌ Erro: Este usuário já existe no banco de dados.");
         } else {
-            callback(new Error('Usuário não encontrado'));
+            console.error("❌ Erro ao cadastrar admin:", err.message);
         }
-    });
+    } finally {
+        process.exit();
+    }
 }
 
-module.exports = { db, cadastrarUsuario, listarTabelas,deletarTabelaUsuarios, deletarUsuario, secret_from_user };
+async function userExists(usuario) {
+    const sql = "SELECT COUNT(*) AS count FROM usuarios WHERE usuario = ?";
+    try {
+        const result = await client.execute({
+            sql,
+            args: [usuario]
+        });
+        return result.rows[0].count > 0;
+    } catch (err) {
+        console.error("Erro ao verificar usuário:", err.message);
+        throw err;
+    }
+}
+
+async function password_from_user(usuario) {
+    const sql = "SELECT password FROM usuarios WHERE usuario = ?";
+    try {
+        const result = await client.execute({
+            sql,
+            args: [usuario]
+        });
+        if (result.rows.length > 0) {
+            return result.rows[0].password;
+        } else {
+            throw new Error("Usuário não encontrado");
+        }
+    } catch (err) {
+        console.error("Erro ao obter password:", err.message);
+        throw err;
+    }
+}
+
+async function existeToken(token) {
+    const sql = "SELECT COUNT(*) AS count FROM sessoes WHERE token = ?";
+    try {
+        const result = await client.execute({
+            sql,
+            args: [token]
+        });
+        return result.rows[0].count > 0;
+    } catch (err) {
+        console.error("Erro ao verificar token:", err.message);
+        throw err;
+    }
+}
+
+async function findUserID(usuario){
+    const sql = "SELECT id FROM usuarios WHERE usuario = ?";
+    try {
+        const result = await client.execute({
+            sql,
+            args: [usuario]
+        });
+        if (result.rows.length > 0) {
+            return result.rows[0].id;
+        } else {
+            throw new Error("Usuário não encontrado");
+        }
+    } catch (err) {
+        console.error("Erro ao obter userID:", err.message);
+        throw err;
+    }
+}
+
+//checar se a sessao existe e se não expirou (se expirou, deletar do banco de dados)
+async function checkSession(usuario, token) {
+}
+
+
+// Na tabela sessoes o usuario é reconhecido pelo seu userID
+async function createSession(usuario, token) {
+    // Define expiração para 12 horas (bom para admin)
+    const expira = new Date();
+    expira.setHours(expira.getHours() + 2);
+    
+    const usuarioId = await findUserID(usuario);
+    const sql = "INSERT INTO sessoes (usuario_id, token, expira_em) VALUES (?, ?, ?)";
+    
+    try {
+        await client.execute({
+            sql,
+            args: [usuarioId, token, expira.toISOString()]
+        });
+        return token;
+    } catch (err) {
+        console.error("Erro ao gerar sessão:", err.message);
+    }
+}
+
+// Exemplo de função para listar usuários (substituindo o db.all)
+const listarUsuarios = async () => {
+    try {
+        const result = await client.execute("SELECT usuario FROM usuarios");
+        // O Turso retorna os dados em result.rows
+        console.log("--- Lista de Usuários no Turso ---");
+        result.rows.forEach(row => {
+            console.log(`- ${row.usuario}`);
+        });
+        return result.rows;
+    } catch (err) {
+        console.error("Erro ao acessar o Turso:", err.message);
+        throw err;
+    }
+};
+
+module.exports = {createSession, userExists, password_from_user};
