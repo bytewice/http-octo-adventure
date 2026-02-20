@@ -11,39 +11,6 @@ const client = createClient({
   authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
-async function cadastrarAdmin() {
-    const usuario = process.env.ADMIN_USER;
-    const senhaPura = process.env.ADMIN_PASS; 
-    const secret = process.env.ADMIN_SECRET;
-    const role = 'admin';
-
-    try {
-        console.log("Gerando hash da senha...");
-        const hash = crypto.createHash('sha256').update(senhaPura).digest('hex');
-        console.log(`Conectando ao Turso em Virginia para cadastrar ${usuario}...`);
-        
-        const sql = `
-            INSERT INTO usuarios (usuario, password, secret, role) 
-            VALUES (?, ?, ?, ?)
-        `;
-
-        await client.execute({
-            sql,
-            args: [usuario, hash, secret, role]
-        });
-
-        console.log("✅ Usuário administrador cadastrado com sucesso no Turso!");
-    } catch (err) {
-        if (err.message.includes("UNIQUE constraint failed")) {
-            console.error("❌ Erro: Este usuário já existe no banco de dados.");
-        } else {
-            console.error("❌ Erro ao cadastrar admin:", err.message);
-        }
-    } finally {
-        process.exit();
-    }
-}
-
 async function userExists(usuario) {
     const sql = "SELECT COUNT(*) AS count FROM usuarios WHERE usuario = ?";
     try {
@@ -67,26 +34,29 @@ async function password_from_user(usuario) {
         });
         if (result.rows.length > 0) {
             return result.rows[0].password;
-        } else {
-            throw new Error("Usuário não encontrado");
         }
+        // não pode dar throw err pq se não existir o código tem continuar funcionando
+        return null;
     } catch (err) {
-        console.error("Erro ao obter password:", err.message);
-        throw err;
+        console.error("Erro ao acessar o TURSO///PASSWORD_FROM_USER///:", err.message);
+        return null;
     }
 }
 
-async function existeToken(token) {
+async function tokenExists(token) {
     const sql = "SELECT COUNT(*) AS count FROM sessoes WHERE token = ?";
     try {
         const result = await client.execute({
             sql,
             args: [token]
         });
-        return result.rows[0].count > 0;
+        if(result.rows.length > 0){
+            return result.rows[0].count > 0;
+        }
+        return false;
     } catch (err) {
         console.error("Erro ao verificar token:", err.message);
-        throw err;
+        return false;
     }
 }
 
@@ -97,29 +67,81 @@ async function findUserID(usuario){
             sql,
             args: [usuario]
         });
-        if (result.rows.length > 0) {
+        if (result.rows.length > 0) 
             return result.rows[0].id;
-        } else {
-            throw new Error("Usuário não encontrado");
-        }
+        else 
+            return false;
+
     } catch (err) {
-        console.error("Erro ao obter userID:", err.message);
-        throw err;
+        console.error("Erro ao acesar o TURSO///FIND_USER_ID///:", err.message);
+        return false;
+    }
+}
+
+async function checkSessionExists(token){
+    const sql = "SELECT COUNT(*) AS count FROM sessoes WHERE token = ?";
+    try {
+        const result = await client.execute({
+            sql,
+            args: [token]
+        });
+        
+        if(result.rows.length > 0){
+            return result.rows[0].count > 0;
+        }
+
+        return false;
+    } catch (err) {
+        console.error("Erro ao acesar o TURSO///CHECK_SESSION_EXISTS///:", err.message);
+        return false;
     }
 }
 
 //checar se a sessao existe e se não expirou (se expirou, deletar do banco de dados)
-async function checkSession(usuario, token) {
+async function checkValidSession(usuario, token) {
+    const sql = "SELECT expira_em FROM sessoes WHERE token = ? AND usuario_id = ?";
+    try {
+        const usuarioId = await findUserID(usuario);
+        // result = data que vai expirar
+        const result = await client.execute({ 
+            sql,
+            args: [token, usuarioId]
+        });
+        if (result.rows.length > 0) {
+            const expiraEm = new Date(result.rows[0].expira_em);
+            if (new Date() < expiraEm) {
+                return true; // Sessão válida
+            } else {
+                // Sessão expirada, deletar do banco de dados
+                await client.execute({
+                    sql: "DELETE FROM sessoes WHERE token = ?",
+                    args: [token]
+                });
+                return false; // Sessão expirada
+            }
+        } else {
+            return false; // Token não encontrado
+        }
+    } catch (err) {
+        console.error("Erro ao acesar o TURSO///CHECK_VALID_SESSION///:", err.message);
+        return false;
+    }
 }
 
+// gerar sessão pra usuário não autenticado
+async function createSession(){
+
+}
 
 // Na tabela sessoes o usuario é reconhecido pelo seu userID
-async function createSession(usuario, token) {
+async function createUserSession(usuario, token) {
+    
     // Define expiração para 12 horas (bom para admin)
+    const usuarioId = await findUserID(usuario);
+    
     const expira = new Date();
     expira.setHours(expira.getHours() + 2);
     
-    const usuarioId = await findUserID(usuario);
     const sql = "INSERT INTO sessoes (usuario_id, token, expira_em) VALUES (?, ?, ?)";
     
     try {
@@ -133,20 +155,4 @@ async function createSession(usuario, token) {
     }
 }
 
-// Exemplo de função para listar usuários (substituindo o db.all)
-const listarUsuarios = async () => {
-    try {
-        const result = await client.execute("SELECT usuario FROM usuarios");
-        // O Turso retorna os dados em result.rows
-        console.log("--- Lista de Usuários no Turso ---");
-        result.rows.forEach(row => {
-            console.log(`- ${row.usuario}`);
-        });
-        return result.rows;
-    } catch (err) {
-        console.error("Erro ao acessar o Turso:", err.message);
-        throw err;
-    }
-};
-
-module.exports = {createSession, userExists, password_from_user};
+module.exports = {createUserSession, userExists, password_from_user};
