@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const path = require('path');
 
 const authController = require("../controllers/authController");
 const basicController = require("../controllers/basicController");
-const viewPath = path.join(__dirname, '..', 'view');
+const middleware = require("../middleware/middleware");
 
 // Rota Raiz (index)
 router.get('/', basicController.basicController);

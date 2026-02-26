@@ -18,14 +18,15 @@ async function userExists(usuario) {
             sql,
             args: [usuario]
         });
-        return result.rows[0].count > 0;
+        if(result.rows.length === 0) return false; // Se não houver resultados, o usuário não existe
+        else return true; // Se houver pelo menos um resultado, o usuário existe
     } catch (err) {
         console.error("Erro ao verificar usuário:", err.message);
-        throw err;
+        return false;
     }
 }
 
-async function password_from_user(usuario) {
+async function getPassword(usuario) {
     const sql = "SELECT password FROM usuarios WHERE usuario = ?";
     try {
         const result = await client.execute({
@@ -43,6 +44,24 @@ async function password_from_user(usuario) {
     }
 }
 
+async function sessionExists(user_id){
+    const sql = "SELECT COUNT(*) AS count FROM sessoes WHERE usuario_id = ?";
+    try {
+        const result = await client.execute({
+            sql,
+            args: [user_id]
+        });
+        if(result.rows.length > 0){
+            return true;
+        }   
+        else
+            return false;
+    } catch (err) {
+        console.error("Erro ao acessar o TURSO///SESSION_EXISTS///:", err.message);
+        return false;
+    }   
+}
+
 async function tokenExists(token) {
     const sql = "SELECT COUNT(*) AS count FROM sessoes WHERE token = ?";
     try {
@@ -51,7 +70,7 @@ async function tokenExists(token) {
             args: [token]
         });
         if(result.rows.length > 0){
-            return result.rows[0].count > 0;
+            return true; // Se o token for encontrado, retorna true
         }
         return false;
     } catch (err) {
@@ -78,59 +97,67 @@ async function findUserID(usuario){
     }
 }
 
-async function checkSessionExists(token){
-    const sql = "SELECT COUNT(*) AS count FROM sessoes WHERE token = ?";
+
+async function expiredSession(token) {
+    // O SQL já nos diz se expirou (1 para sim, 0 para não)
+    const sql = "SELECT (expira_em <= DATETIME('now')) AS expirou FROM sessoes WHERE token = ?";
+
     try {
         const result = await client.execute({
             sql,
             args: [token]
         });
-        
-        if(result.rows.length > 0){
-            return result.rows[0].count > 0;
-        }
 
-        return false;
+        if (result.rows.length === 0) return true; // Token não existe = expirado/inválido
+
+        // No Turso, booleanos são 1 ou 0
+        return result.rows[0].expirou === 1;
+
     } catch (err) {
-        console.error("Erro ao acesar o TURSO///CHECK_SESSION_EXISTS///:", err.message);
-        return false;
+        console.error("Erro ao verificar expiração:", err.message);
+        return true; // Falha segura: na dúvida, desloga
     }
 }
 
 //checar se a sessao existe e se não expirou (se expirou, deletar do banco de dados)
-async function checkValidSession(usuario, token) {
-    const sql = "SELECT expira_em FROM sessoes WHERE token = ? AND usuario_id = ?";
-    try {
-        const usuarioId = await findUserID(usuario);
-        // result = data que vai expirar
-        const result = await client.execute({ 
-            sql,
-            args: [token, usuarioId]
-        });
-        if (result.rows.length > 0) {
-            const expiraEm = new Date(result.rows[0].expira_em);
-            if (new Date() < expiraEm) {
-                return true; // Sessão válida
-            } else {
-                // Sessão expirada, deletar do banco de dados
+async function checkValidSession(token) {
+    if (await tokenExists(token)) {
+        if (await expiredSession(token)) {
+            const sql = "DELETE FROM sessoes WHERE token = ?";
+            try {
                 await client.execute({
-                    sql: "DELETE FROM sessoes WHERE token = ?",
+                    sql,
                     args: [token]
                 });
-                return false; // Sessão expirada
+                console.log("Sessão expirada deletada com sucesso.");
+            } catch (err) {
+                console.error("Erro ao deletar sessão expirada:", err.message);
             }
-        } else {
-            return false; // Token não encontrado
+            return false; // Sessão inválida (expirada)
         }
-    } catch (err) {
-        console.error("Erro ao acesar o TURSO///CHECK_VALID_SESSION///:", err.message);
-        return false;
+        return true; // Sessão válida
     }
+    return false; // Token não encontrado, sessão inválida
 }
 
 // gerar sessão pra usuário não autenticado
-async function createSession(){
+async function createSession(token){
+    
+    const expira = new Date();
+    expira.setHours(expira.getHours() + 2); // Expira em 2 horas
 
+    const sql = "INSERT INTO sessoes (usuario_id, token, expira_em) VALUES (?, ?, ?)";
+    
+    try {
+        await client.execute({
+            sql,
+            args: [null, token, expira.toISOString()]
+        });
+        return token;
+    } catch (err) {
+        console.error("Erro ao gerar sessão para usuário não autenticado:", err.message);
+        return null;
+    }
 }
 
 // Na tabela sessoes o usuario é reconhecido pelo seu userID
@@ -139,6 +166,14 @@ async function createUserSession(usuario, token) {
     // Define expiração para 12 horas (bom para admin)
     const usuarioId = await findUserID(usuario);
     
+    if(await sessionExists(usuarioId)){
+        // se já existir uma sessão pra esse usuário, deleta a sessão antiga e cria uma nova
+        await client.execute({
+            sql: "DELETE FROM sessoes WHERE usuario_id = ?",
+            args: [usuarioId]
+        });
+    }
+
     const expira = new Date();
     expira.setHours(expira.getHours() + 2);
     
@@ -155,4 +190,22 @@ async function createUserSession(usuario, token) {
     }
 }
 
-module.exports = {createUserSession, userExists, password_from_user};
+
+async function getUserRoleFromSession(token) {
+    const sql = "SELECT u.role FROM sessoes s JOIN usuarios u ON s.usuario_id = u.id WHERE s.token = ?";
+    try {
+        const result = await client.execute({
+            sql,
+            args: [token]
+        });
+        if (result.rows.length > 0) {
+            return result.rows[0].role;
+        }
+        return null;
+    } catch (err) {
+        console.error("Erro ao obter role do usuário:", err.message);
+        return null;
+    }
+}
+
+module.exports = {createUserSession, userExists, getPassword, checkValidSession, createSession, getUserRoleFromSession};
