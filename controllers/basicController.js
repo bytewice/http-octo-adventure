@@ -1,43 +1,46 @@
 const path = require('path');
 const viewPath = path.join(__dirname, '..', 'view');
 
-const { cadastrarUsuario, listarTabelas, deletarTabelaUsuarios, secret_from_user } = require('../db/database.js');
+const crypto = require('crypto'); // usando crypto so por enquanto q n coloquei o salt no database
+const { client, teste, checkValidSession } = require('../db/database');
 
-function basicController(req,res){
+async function basicController(req,res){
 
     if(req.path === '/'){
-        res.sendFile(path.join(viewPath, 'index.html'));
+        
+
+        const token = req.cookies.sessionID;
+        if(await checkValidSession(token)){
+            return res.sendFile(path.join(viewPath, 'index.html'));
+        }
+        // Criar sessão e enviar cookie -> evitar csrf
+        else{
+            const usuario = null;
+            const token = crypto.randomBytes(32).toString('hex');
+            await createSession(token); // Salva a sessão no banco de dados
+            res.cookie('sessionID', token, {
+                httpOnly: true,  // Impede que o JavaScript (XSS) acesse o cookie
+                secure: false,    // o proj vai ser em http <---- vulnerável!!
+                sameSite: 'strict', // Proteção nativa contra ataques CSRF
+                maxAge: 3600000  // Tempo de vida do cookie (em milissegundos)
+            });        
+            return res.redirect('/sobre');;
+        }
     }
 }
 
-function about(req,res){
+async function about(req,res){
 
-    /*
-    !!!!!!!!!!!!!!!!TESTE FUNÇÕES DATABASE!!!!!!!!!!!!!
-    listarTabelas();
-    deletarTabelaUsuarios();
-    listarTabelas();
-    cadastrarUsuario("brunao", "123", "sessid_example", "admin", "secret_example");
-    cadastrarUsuario("dumb_user", "456", "sessid_example2", "user", "secret_example2");
-    cadastrarUsuario("another_user", "789", "sessid_example3", "user", "secret_example3");
-
-    secret_from_user("brunao", (err, secret) => {
-        if (err) {
-            console.error('Erro ao obter secret:', err.message);
-        } else {
-            console.log(`Secret do usuário "brunao": ${secret}`);
-        }
-    });
-    */
     if(req.path === '/sobre'){
         res.set('Content-Type', 'text/plain; charset=utf-8');
-        res.send('Este é um servidor rodando com Express.js {secret do brunao:}');
+        res.send('Este é um servidor rodando com Express.js');
     }
 }
 
 function login(req,res){
 
     if(req.path === '/login'){  
+
         res.sendFile(path.join(viewPath, 'login.html'));
     }
 }
