@@ -16,6 +16,9 @@ router.get('/sobre', basicController.about);
 
 // Rota Home (agora com autenticação)
 router.post("/login", authController.authenticate); // Usando a função que autentica com o banco de dados
-router.get("/home", authController.userHome);
+router.get("/home", middleware.authUser, authController.userHome);
 
 module.exports = router;
+
+
+// LEMBRAR QUE EU COLOQUEI UTILIZANDO O MIDDLEWARE MAS ISSO NAO VAI ESTAR FUNCIONANDO JÁ QUE NAO TO CONSEGUINDO PASSAR UM COOKIE NO COMEÇO DA NAVEGAÇÃO!!!!!!!!!!!!

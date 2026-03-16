@@ -38,6 +38,7 @@ async function authUser(req, res, next) {
         if (validSession) {
             const role = await getUserRoleFromSession(token);
             if(role === 'user' || role === 'admin' ) {
+                console.log("\nMiddleware--Role do usuário:", role, "\n"); // Log para verificar a role do usuário
                 return next(); // Permite o acesso à rota protegida para admins
             }
         }

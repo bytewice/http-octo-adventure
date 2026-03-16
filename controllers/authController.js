@@ -3,8 +3,8 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto'); // usando crypto so por enquanto q n coloquei o salt no database
 const cookieParser = require('cookie-parser');
 
-const {checkValidSession, createUserSession, userExists, getPassword} = require('../db/database');
-const { get } = require('http');
+const {checkValidSession, createUserSession, userExists, getPassword, getUserRoleFromSession} = require('../db/database');
+//const { get } = require('http');
 
 async function userHome(req, res) {
 
@@ -47,7 +47,7 @@ async function authenticate(req, res) {
                 await createUserSession(usuario, token); // Salva a sessão no banco de dados
                 res.cookie('sessionID', token, {
                   httpOnly: true,  
-                  secure: false,    // o proj vai ser em http msm <---- vulnerável
+                  secure: true, // <- all comms are going to be over HTTPS
                   sameSite: 'strict', 
                   maxAge: 3600000  // Tempo de vida do cookie (em milissegundos)
                 });

@@ -1,0 +1,1 @@
+// p dps criar/editar/pegar/deletar segredo do usuario
