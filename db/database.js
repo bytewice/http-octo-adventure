@@ -190,6 +190,22 @@ async function createUserSession(usuario, token) {
     }
 }
 
+async function getUserRoleFromUser(usuario){
+    const sql = "SELECT role FROM usuarios WHERE usuario = ?";
+    try {
+        const result = await client.execute({
+            sql,
+            args: [usuario]
+        });
+        if (result.rows.length > 0) {
+            return result.rows[0].role;
+        }
+        return null;
+    } catch (err) {
+        console.error("Erro ao obter role do usuário:", err.message);
+        return null;
+    }
+}
 
 async function getUserRoleFromSession(token) {
     const sql = "SELECT u.role FROM sessoes s JOIN usuarios u ON s.usuario_id = u.id WHERE s.token = ?";
@@ -208,4 +224,4 @@ async function getUserRoleFromSession(token) {
     }
 }
 
-module.exports = {createUserSession, userExists, getPassword, checkValidSession, createSession, getUserRoleFromSession};
+module.exports = {createUserSession, userExists, getPassword, checkValidSession, createSession, getUserRoleFromSession, getUserRoleFromUser};

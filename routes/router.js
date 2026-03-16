@@ -10,13 +10,17 @@ router.get('/', basicController.basicController);
 
 // Rota de Login
 router.get('/login', basicController.login);
+router.get('/Alogin', basicController.login);
 
 // Rota Sobre (Texto simples)
 router.get('/sobre', basicController.about);
 
 // Rota Home (agora com autenticação)
-router.post("/login", authController.authenticate); // Usando a função que autentica com o banco de dados
-router.get("/home", middleware.authUser, authController.userHome);
+router.post("/login", authController.authenticateU); // Usando a função que autentica com o banco de dados
+router.post("/Alogin", authController.authenticateA); // Usando a função que autentica com o banco de dados
+
+router.get("/home", middleware.authAdmin, authController.userHome);
+
 
 module.exports = router;
 

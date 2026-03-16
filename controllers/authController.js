@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto'); // usando crypto so por enquanto q n coloquei o salt no database
 const cookieParser = require('cookie-parser');
 
-const {checkValidSession, createUserSession, userExists, getPassword, getUserRoleFromSession} = require('../db/database');
+const {getUserRoleFromUser, checkValidSession, createUserSession, userExists, getPassword, getUserRoleFromSession} = require('../db/database');
 //const { get } = require('http');
 
 async function userHome(req, res) {
@@ -31,12 +31,16 @@ async function userHome(req, res) {
 }
 
 
-async function authenticate(req, res) {
+async function authenticateA(req, res) {
     const { usuario, senha } = req.body;
 
     const existe = await userExists(usuario);
     
     if (existe){
+        if( await getUserRoleFromUser(usuario) !== 'admin' ){ // Verifica se o usuário é admin
+            const dumb_hash = crypto.createHash('sha256').update("dumb_hash").digest('hex');
+            return res.redirect('/login');
+        }
         const hash = crypto.createHash('sha256').update(senha).digest('hex');
         const password = await getPassword(usuario);
         if( hash === password ){
@@ -51,6 +55,7 @@ async function authenticate(req, res) {
                   sameSite: 'strict', 
                   maxAge: 3600000  // Tempo de vida do cookie (em milissegundos)
                 });
+                
             return res.redirect('/home');
         }
     }
@@ -64,6 +69,13 @@ async function authenticate(req, res) {
     return res.redirect('/login');
 }
 
+async function authenticateU(req,res) {
+    res.status(200);
+    res.set("Content-Type", "text/plain; charset=utf-8");
+    
+    return res.send(`✅ LOGIN USER TEST`);
+}
+
 module.exports = {
-    authenticate, userHome
+    authenticateA, authenticateU, userHome
 };
