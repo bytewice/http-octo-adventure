@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevApp // Autenticação de Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Fira Code', monospace;
+        }
+
+        .neon-border:focus-within {
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.3);
+            border-color: #4ade80;
+        }
+
+        /* Animação simples de 'scanning' no fundo */
+        .scanline {
+            width: 100%;
+            height: 2px;
+            background: rgba(74, 222, 128, 0.1);
+            position: absolute;
+            animation: scan 4s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-300 h-screen flex items-center justify-center overflow-hidden relative">
+
+    <div class="scanline"></div>
+
+    <div class="w-full max-w-md z-10">
+        <div class="text-center mb-10">
+            <h2 class="text-green-500 text-3xl font-bold mb-2 tracking-tighter">
+                [ AUTH_REQUIRED ]
+            </h2>
+            <p class="text-gray-500 text-sm italic">Insira credenciais para descriptografar sessão_</p>
+        </div>
+
+        <form action="/login" method="POST" class="bg-gray-900 border border-gray-800 p-8 rounded-lg shadow-2xl relative">
+            <div class="absolute top-0 right-0 p-2 text-[10px] text-gray-700 font-bold uppercase">
+                Ver: 2.0.26
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-green-500 text-xs font-bold mb-2 uppercase tracking-widest">Usuário</label>
+                <input type="text" name="usuario" placeholder="root" required
+                    class="w-full bg-gray-950 border border-gray-800 rounded p-3 text-green-400 placeholder-gray-700 outline-none transition-all neon-border">
+            </div>
+
+            <div class="mb-8">
+                <label class="block text-green-500 text-xs font-bold mb-2 uppercase tracking-widest">Senha</label>
+                <input type="password" name="senha" placeholder="********" required
+                    class="w-full bg-gray-950 border border-gray-800 rounded p-3 text-green-400 placeholder-gray-700 outline-none transition-all neon-border">
+            </div>
+
+            <button type="submit" 
+                class="w-full bg-green-600 hover:bg-green-500 text-gray-950 font-bold py-3 rounded uppercase tracking-tighter transition-all active:scale-95 shadow-[0_0_10px_rgba(74,222,128,0.4)]">
+                Executar Login
+            </button>
+
+            <div class="mt-6 flex justify-between text-[10px] text-gray-600 uppercase">
+                <a href="/" class="hover:text-green-500 transition underline decoration-gray-800">// Voltar_Início</a>
+                <span class="text-gray-800">Status: Terminal_Pronto</span>
+            </div>
+        </form>
+
+        <p class="text-center mt-8 text-gray-700 text-xs">
+            Atenção: Acesso monitorado pelo protocolo de segurança.
+        </p>
+    </div>
+
+    <input type="hidden" name="brunao" value="123">
+</body>
+</html>

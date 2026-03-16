@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevApp Terminal - Home</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Adicionando um pequeno brilho néon no hover dos elementos verdes */
+        .neon-hover:hover {
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.5);
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-300 font-mono"> <header class="bg-gray-900 shadow-md sticky top-0 z-50 border-b border-gray-800">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="text-2xl font-bold text-green-400">
+                <span class="text-gray-500">&gt;</span> DevApp_
+            </div>
+            <div class="space-x-8 flex items-center">
+                <a href="#hero" class="hover:text-green-300 transition text-sm">//início</a>
+                <a href="#blog" class="hover:text-green-300 transition text-sm">//blog</a>
+                <a href="/login" class="border border-green-500 text-green-400 px-5 py-2 rounded hover:bg-green-950 transition neon-hover text-sm font-bold">
+                    [ LOGIN ]
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="hero" class="container mx-auto px-6 py-24 text-center border-b border-gray-800">
+            <h1 class="text-5xl font-extrabold mb-6 text-gray-100 tracking-tight">
+                Execute.<span class="text-green-400">Inove.</span><span class="text-gray-100">Segurança.</span>
+            </h1>
+            <p class="text-lg text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed">
+                Bem-vindo ao terminal central. Acesse sua área restrita para gerenciar protocolos e explorar nossa base de conhecimento.
+            </p>
+            <div class="flex justify-center gap-6">
+                <button onclick="window.location.href='/login'" 
+                        class="bg-green-500 text-gray-950 px-8 py-3 rounded text-lg font-bold hover:bg-green-400 transition neon-hover">
+                    Acessar Terminal
+                </button>
+                <a href="#blog" class="border border-gray-700 px-8 py-3 rounded text-lg font-medium hover:bg-gray-900 transition text-gray-400">
+                    Ver_Docs
+                </a>
+            </div>
+        </section>
+
+        <section id="blog" class="container mx-auto px-6 py-24">
+            <div class="flex justify-between items-end mb-16 border-l-4 border-green-500 pl-6">
+                <div>
+                    <h2 class="text-3xl font-bold mb-2 text-gray-100">Repositório de Conhecimento</h2>
+                    <p class="text-gray-500 text-sm">Log de atualizações e artigos técnicos.</p>
+                </div>
+                <span class="text-green-500 font-mono text-sm">[ STATUS: Aguardando_Dados... ]</span>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-gray-900 p-6 rounded-lg border border-gray-800 opacity-60">
+                    <div class="h-40 bg-gray-800 rounded mb-4 flex items-center justify-center">
+                        <span class="text-gray-700 text-4xl">{...}</span>
+                    </div>
+                    <div class="h-4 w-1/4 bg-gray-800 mb-3 rounded"></div>
+                    <div class="h-6 w-3/4 bg-gray-800 rounded"></div>
+                </div>
+                <div class="bg-gray-900 p-6 rounded-lg border border-gray-800 opacity-60">
+                    <div class="h-40 bg-gray-800 rounded mb-4 flex items-center justify-center">
+                        <span class="text-gray-700 text-4xl">{...}</span>
+                    </div>
+                    <div class="h-4 w-1/4 bg-gray-800 mb-3 rounded"></div>
+                    <div class="h-6 w-3/4 bg-gray-800 rounded"></div>
+                </div>
+                <div class="bg-gray-900 p-6 rounded-lg border border-gray-800 opacity-60">
+                    <div class="h-40 bg-gray-800 rounded mb-4 flex items-center justify-center">
+                        <span class="text-gray-700 text-4xl">{...}</span>
+                    </div>
+                    <div class="h-4 w-1/4 bg-gray-800 mb-3 rounded"></div>
+                    <div class="h-6 w-3/4 bg-gray-800 rounded"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-gray-950 text-gray-600 py-12 mt-20 border-t border-gray-800">
+        <div class="container mx-auto px-6 text-center text-sm font-mono">
+            <p>&copy; 2026 DevApp_Terminal :: Todos os direitos reservados.</p>
+            <p class="mt-2 text-xs text-gray-700">Conexão Segura [HTTPS] Ativa.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
